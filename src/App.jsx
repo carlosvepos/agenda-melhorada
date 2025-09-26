@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input.jsx'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog.jsx'
 import { Moon, Sun, Search, ChevronDown, X, Download, ChevronLeft, ChevronRight, Edit, Plus, Trash2, Menu } from 'lucide-react'
+import VoiceCommands from './VoiceCommands.jsx'
 import './App.css'
 
 function App() {
@@ -544,6 +545,68 @@ function App() {
     a.download = 'relatorio-semanal.csv'
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  // Voice command handlers
+  const handleVoiceAddActivity = (activityData) => {
+    const { item, timeSlot, category, duration } = activityData
+    const blockData = blocksData[category] || blocksData['autocuidado']
+    
+    // Usar data atual para comando de voz
+    const today = new Date()
+    const key = `${timeSlot}-${today.toISOString().split('T')[0]}`
+    
+    setScheduledItems(prev => ({
+      ...prev,
+      [key]: {
+        item,
+        blockId: category,
+        color: blockData.color,
+        duration,
+        timeSlot,
+        dayIndex: today.getDay(),
+        fullDate: today,
+        id: key
+      }
+    }))
+  }
+
+  const handleVoiceRemoveActivity = (target) => {
+    // Remover por nome da atividade ou horário
+    const itemsToRemove = Object.entries(scheduledItems).filter(([key, item]) => {
+      return item.item.toLowerCase().includes(target.toLowerCase()) ||
+             item.timeSlot.includes(target)
+    })
+
+    if (itemsToRemove.length > 0) {
+      setScheduledItems(prev => {
+        const newItems = { ...prev }
+        itemsToRemove.forEach(([key]) => {
+          delete newItems[key]
+        })
+        return newItems
+      })
+    }
+  }
+
+  const handleVoiceNavigate = (direction) => {
+    if (direction === 'today') {
+      setCurrentDate(new Date())
+    } else {
+      navigateTime(direction)
+    }
+  }
+
+  const handleVoiceViewChange = (view) => {
+    setCurrentView(view)
+  }
+
+  const handleVoiceToggleDarkMode = () => {
+    setDarkMode(!darkMode)
+  }
+
+  const handleVoiceShowReport = () => {
+    setCurrentTab('Relatório')
   }
 
   // Apply dark mode class to document
@@ -1350,6 +1413,18 @@ function App() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Voice Commands */}
+      <VoiceCommands
+        onAddActivity={handleVoiceAddActivity}
+        onRemoveActivity={handleVoiceRemoveActivity}
+        onNavigate={handleVoiceNavigate}
+        onViewChange={handleVoiceViewChange}
+        onToggleDarkMode={handleVoiceToggleDarkMode}
+        onShowReport={handleVoiceShowReport}
+        onExportData={exportCSV}
+        blocksData={blocksData}
+      />
     </div>
   )
 }
